@@ -38,6 +38,17 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             return Authenticate(parameters, source.Token);
         }
 
+        public Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters)
+        {
+            var source = new CancellationTokenSource();
+            return AuthenticateSSH(parameters, source.Token);
+        }
+
+        public virtual Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException("SSH authentication is not supported here");
+        }
+
         public bool TryAuthenticate(AuthenticationParameters parameters, out Task<IAccessToken> token)
         {
             var source = new CancellationTokenSource();
@@ -56,6 +67,29 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             if (Next != null)
             {
                 return Next.TryAuthenticate(parameters, cancellationToken, out token);
+            }
+
+            return false;
+        }
+
+        public bool TryAuthenticateSSH(AuthenticationParameters parameters, out Task<IAccessToken> token)
+        {
+            var source = new CancellationTokenSource();
+            return TryAuthenticateSSH(parameters, source.Token, out token);
+        }
+
+        public bool TryAuthenticateSSH(AuthenticationParameters parameters, CancellationToken cancellationToken, out Task<IAccessToken> token)
+        {
+            token = null;
+            if (CanAuthenticate(parameters))
+            {
+                token = AuthenticateSSH(parameters, cancellationToken);
+                return true;
+            }
+
+            if (Next != null)
+            {
+                return Next.TryAuthenticateSSH(parameters, cancellationToken, out token);
             }
 
             return false;

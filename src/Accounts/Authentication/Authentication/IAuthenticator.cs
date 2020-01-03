@@ -69,5 +69,37 @@ namespace Microsoft.Azure.Commands.Common.Authentication
         /// <param name="token">The token based authentication information</param>
         /// <returns></returns>
         bool TryAuthenticate(AuthenticationParameters parameters, CancellationToken cancellationToken, out Task<IAccessToken> token);
+
+        /// <summary>
+        /// Apply this authenticator to the given authentication parameters
+        /// </summary>
+        /// <param name="parameters">The complex object containing authentication specific information (e.g., tenant, token cache, etc.)</param>
+        /// <returns></returns>
+        Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters);
+
+        /// <summary>
+        /// Apply this authenticator to the given authentication parameters
+        /// </summary>
+        /// <param name="parameters">The complex object containing authentication specific information (e.g., tenant, token cache, etc.)</param>
+        /// <param name="cancellationToken">The cancellation token provided from the cmdlet to halt authentication.</param>
+        /// <returns></returns>
+        Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Determine if this request can be authenticated using the given authenticator, and authenticate if it can
+        /// </summary>
+        /// <param name="parameters">The complex object containing authentication specific information (e.g., tenant, token cache, etc.)</param>
+        /// <param name="token">The token based authentication information</param>
+        /// <returns></returns>
+        bool TryAuthenticateSSH(AuthenticationParameters parameters, out Task<IAccessToken> token);
+
+        /// <summary>
+        /// Determine if this request can be authenticated using the given authenticator, and authenticate if it can
+        /// </summary>
+        /// <param name="parameters">The complex object containing authentication specific information (e.g., tenant, token cache, etc.)</param>
+        /// <param name="cancellationToken">The cancellation token provided from the cmdlet to halt authentication.</param>
+        /// <param name="token">The token based authentication information</param>
+        /// <returns></returns>
+        bool TryAuthenticateSSH(AuthenticationParameters parameters, CancellationToken cancellationToken, out Task<IAccessToken> token);
     }
 }

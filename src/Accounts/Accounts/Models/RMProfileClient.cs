@@ -316,6 +316,8 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
             return _profile.ToProfile();
         }
 
+        public string GetSSHCertificate()
+
         public IAzureContext SetCurrentContext(string subscriptionNameOrId, string tenantId, string name = null)
         {
             IAzureSubscription subscription = null;
@@ -518,6 +520,29 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
             }
 
             return AzureSession.Instance.AuthenticationFactory.Authenticate(
+                account,
+                environment,
+                tenantId,
+                password,
+                promptBehavior,
+                promptAction);
+        }
+
+        private IAccessToken AcquireSSHCertificate(
+            IAzureAccount account,
+            IAzureEnvironment environment,
+            string tenantId,
+            SecureString password,
+            string promptBehavior,
+            Action<string> promptAction)
+        {
+            if (account.Type == AzureAccount.AccountType.AccessToken)
+            {
+                tenantId = tenantId ?? GetCommonTenant(account);
+                return new SimpleAccessToken(account, tenantId);
+            }
+
+            return AzureSession.Instance.AuthenticationFactory.AuthenticateSSH(
                 account,
                 environment,
                 tenantId,
