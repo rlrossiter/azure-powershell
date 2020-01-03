@@ -166,6 +166,8 @@ namespace Microsoft.Azure.Commands.Common.Authentication.Factories
             IAzureAccount account,
             IAzureEnvironment environment,
             string tenant,
+            string jwk,
+            string kid,
             SecureString password,
             string promptBehavior,
             Action<string> promptAction,
@@ -192,7 +194,7 @@ namespace Microsoft.Azure.Commands.Common.Authentication.Factories
             {
                 try
                 {
-                    while (processAuthenticator != null && processAuthenticator.TryAuthenticateSSH(GetAuthenticationParameters(authenticationClientFactory, account, environment, tenant, password, promptBehavior, promptAction, tokenCache, resourceId), out authToken))
+                    while (processAuthenticator != null && processAuthenticator.TryAuthenticateSSH(GetAuthenticationParameters(authenticationClientFactory, account, environment, tenant, password, promptBehavior, promptAction, tokenCache, resourceId), jwk, kid, out authToken))
                     {
                         token = authToken?.ConfigureAwait(true).GetAwaiter().GetResult();
                         if (token != null)
@@ -225,6 +227,8 @@ namespace Microsoft.Azure.Commands.Common.Authentication.Factories
             IAzureAccount account,
             IAzureEnvironment environment,
             string tenant,
+            string jwk,
+            string kid,
             SecureString password,
             string promptBehavior,
             Action<string> promptAction,
@@ -233,7 +237,10 @@ namespace Microsoft.Azure.Commands.Common.Authentication.Factories
             return AuthenticateSSH(
                 account,
                 environment,
-                tenant, password,
+                tenant,
+                jwk,
+                kid,
+                password,
                 promptBehavior,
                 promptAction,
                 AzureSession.Instance.TokenCache,

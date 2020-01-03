@@ -316,7 +316,33 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
             return _profile.ToProfile();
         }
 
-        public string GetSSHCertificate()
+        public string GetSSHCertificate(
+            IAzureAccount account,
+            IAzureEnvironment environment,
+            string tenantId,
+            string jwkStr,
+            string keyId,
+            SecureString password,
+            bool skipValidation,
+            Action<string> promptAction)
+        {
+            string promptBehavior =
+                (password == null &&
+                 account.Type != AzureAccount.AccountType.AccessToken &&
+                 account.Type != AzureAccount.AccountType.ManagedService &&
+                 !account.IsPropertySet(AzureAccount.Property.CertificateThumbprint))
+                ? ShowDialog.Always : ShowDialog.Never;
+
+            return this.AcquireSSHCertificate(
+                account,
+                environment,
+                tenantId,
+                jwkStr,
+                keyId,
+                password,
+                promptBehavior,
+                promptAction).AccessToken;
+        }
 
         public IAzureContext SetCurrentContext(string subscriptionNameOrId, string tenantId, string name = null)
         {
@@ -532,6 +558,8 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
             IAzureAccount account,
             IAzureEnvironment environment,
             string tenantId,
+            string jwkStr,
+            string keyId,
             SecureString password,
             string promptBehavior,
             Action<string> promptAction)
@@ -542,10 +570,12 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
                 return new SimpleAccessToken(account, tenantId);
             }
 
-            return AzureSession.Instance.AuthenticationFactory.AuthenticateSSH(
+            return (AzureSession.Instance.AuthenticationFactory as AuthenticationFactory).AuthenticateSSH(
                 account,
                 environment,
                 tenantId,
+                jwkStr,
+                keyId,
                 password,
                 promptBehavior,
                 promptAction);

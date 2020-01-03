@@ -347,6 +347,7 @@ namespace Microsoft.Azure.Commands.Profile
                    }
 
                    profileClient.WarningLog = (message) => _tasks.Enqueue(new Task(() => this.WriteWarning(message)));
+
                    var task = new Task<AzureRmProfile>( () => profileClient.Login(
                         azureAccount,
                         _environment,

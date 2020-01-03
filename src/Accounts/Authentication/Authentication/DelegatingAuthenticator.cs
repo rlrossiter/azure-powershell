@@ -38,13 +38,13 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             return Authenticate(parameters, source.Token);
         }
 
-        public Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters)
+        public Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, string jwk, string kid)
         {
             var source = new CancellationTokenSource();
-            return AuthenticateSSH(parameters, source.Token);
+            return AuthenticateSSH(parameters, jwk, kid, source.Token);
         }
 
-        public virtual Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, CancellationToken cancellationToken)
+        public virtual Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, string jwk, string kid, CancellationToken cancellationToken)
         {
             throw new NotImplementedException("SSH authentication is not supported here");
         }
@@ -72,24 +72,24 @@ namespace Microsoft.Azure.Commands.Common.Authentication
             return false;
         }
 
-        public bool TryAuthenticateSSH(AuthenticationParameters parameters, out Task<IAccessToken> token)
+        public bool TryAuthenticateSSH(AuthenticationParameters parameters, string jwk, string kid, out Task<IAccessToken> token)
         {
             var source = new CancellationTokenSource();
-            return TryAuthenticateSSH(parameters, source.Token, out token);
+            return TryAuthenticateSSH(parameters, jwk, kid, source.Token, out token);
         }
 
-        public bool TryAuthenticateSSH(AuthenticationParameters parameters, CancellationToken cancellationToken, out Task<IAccessToken> token)
+        public bool TryAuthenticateSSH(AuthenticationParameters parameters, string jwk, string kid, CancellationToken cancellationToken, out Task<IAccessToken> token)
         {
             token = null;
             if (CanAuthenticate(parameters))
             {
-                token = AuthenticateSSH(parameters, cancellationToken);
+                token = AuthenticateSSH(parameters, jwk, kid, cancellationToken);
                 return true;
             }
 
             if (Next != null)
             {
-                return Next.TryAuthenticateSSH(parameters, cancellationToken, out token);
+                return Next.TryAuthenticateSSH(parameters, jwk, kid, cancellationToken, out token);
             }
 
             return false;

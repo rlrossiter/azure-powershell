@@ -90,7 +90,7 @@ namespace Microsoft.Azure.PowerShell.Authenticators
             return null;
         }
 
-        public override Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, CancellationToken cancellationToken)
+        public override Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, string jwk, string kid, CancellationToken cancellationToken)
         {
             var interactiveParameters = parameters as InteractiveParameters;
             var onPremise = interactiveParameters.Environment.OnPremise;
@@ -130,24 +130,9 @@ namespace Microsoft.Azure.PowerShell.Authenticators
                     publicClient = authenticationClientFactory.CreatePublicClient(clientId: clientId, authority: authority, redirectUri: replyUrl, useAdfs: onPremise);
                     TracingAdapter.Information(string.Format("[InteractiveUserAuthenticator] Calling AcquireTokenInteractive - Scopes: '{0}'", string.Join(",", scopes)));
 
-                    string modulus = File.ReadAllText(@"C:\Users\ryrossit\.ssh\id_rsa.pub").Split(' ')[1];
-                    string kty = "RSA";
-                    string n = modulus; //AdalTokens.Base64UrlEncoder.Encode(modulus);
-                    string e = "AQAB";
-                    string kid = modulus.GetHashCode().ToString();
-
-                    Dictionary<string, string> jwk = new Dictionary<string, string>
-                    {
-                        { "kty", kty },
-                        { "n", n },
-                        { "e", e },
-                    };
-
-                    string jwkStrJson = JsonConvert.SerializeObject(jwk);
-
                     var interactiveResponse = publicClient.AcquireTokenInteractive(scopes)
                         .WithCustomWebUi(new CustomWebUi())
-                        .WithSSHCertificateAuthenticationScheme(jwkStrJson, kid)
+                        .WithSSHCertificateAuthenticationScheme(jwk, kid)
                         .ExecuteAsync(cancellationToken);
                     cancellationToken.ThrowIfCancellationRequested();
                     return AuthenticationResultToken.GetAccessTokenAsync(interactiveResponse);

@@ -13,6 +13,8 @@
 // ----------------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Security;
 using System.Threading;
@@ -21,6 +23,8 @@ using Hyak.Common;
 using Microsoft.Azure.Commands.Common.Authentication;
 using Microsoft.Azure.Commands.Common.Authentication.Abstractions;
 using Microsoft.Identity.Client;
+using Microsoft.Identity.Client.SSHCertificates;
+using Newtonsoft.Json;
 
 namespace Microsoft.Azure.PowerShell.Authenticators
 {
@@ -44,6 +48,32 @@ namespace Microsoft.Azure.PowerShell.Authenticators
                 .ConfigureAwait(false).GetAwaiter().GetResult();
             TracingAdapter.Information(string.Format("[SilentAuthenticator] Calling AcquireTokenSilent - Scopes: '{0}', UserId: '{1}', Number of accounts: '{2}'", string.Join(",", scopes), silentParameters.UserId, accounts.Count()));
             var response = publicClient.AcquireTokenSilent(scopes, accounts.FirstOrDefault(a => a.Username == silentParameters.UserId)).ExecuteAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            return AuthenticationResultToken.GetAccessTokenAsync(response);
+        }
+
+        public override Task<IAccessToken> AuthenticateSSH(AuthenticationParameters parameters, string jwk, string kid, CancellationToken cancellationToken)
+        {
+            var silentParameters = parameters as SilentParameters;
+            var onPremise = silentParameters.Environment.OnPremise;
+            var authenticationClientFactory = silentParameters.AuthenticationClientFactory;
+            var resource = silentParameters.Environment.GetEndpoint(silentParameters.ResourceId);
+            var scopes = new string[] { string.Format(AuthenticationHelpers.DefaultScope, resource) };
+            var clientId = AuthenticationHelpers.PowerShellClientId;
+            var authority = onPremise ?
+                                silentParameters.Environment.ActiveDirectoryAuthority :
+                                AuthenticationHelpers.GetAuthority(silentParameters.Environment, silentParameters.TenantId);
+            TracingAdapter.Information(string.Format("[SilentAuthenticator] Creating IPublicClientApplication - ClientId: '{0}', Authority: '{1}', UseAdfs: '{2}'", clientId, authority, onPremise));
+            var publicClient = authenticationClientFactory.CreatePublicClient(clientId: clientId, authority: authority, useAdfs: onPremise);
+            TracingAdapter.Information(string.Format("[SilentAuthenticator] Calling GetAccountsAsync"));
+            var accounts = publicClient.GetAccountsAsync()
+                .ConfigureAwait(false).GetAwaiter().GetResult();
+
+            TracingAdapter.Information(string.Format("[SilentAuthenticator] Calling AcquireTokenSilent - Scopes: '{0}', UserId: '{1}', Number of accounts: '{2}'", string.Join(",", scopes), silentParameters.UserId, accounts.Count()));
+            var response = publicClient
+                .AcquireTokenSilent(scopes, accounts.FirstOrDefault(a => a.Username == silentParameters.UserId))
+                .WithSSHCertificateAuthenticationScheme(jwk, kid)
+                .ExecuteAsync(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             return AuthenticationResultToken.GetAccessTokenAsync(response);
         }
