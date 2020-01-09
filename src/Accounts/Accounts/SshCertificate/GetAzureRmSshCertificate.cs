@@ -11,14 +11,11 @@
 // limitations under the License.
 // ----------------------------------------------------------------------------------
 
-using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Management.Automation;
-using System.Text;
 using Microsoft.Azure.Commands.Common.Authentication.Models;
+using Microsoft.Azure.Commands.Common.Authentication.Ssh;
 using Microsoft.Azure.Commands.ResourceManager.Common;
-using Newtonsoft.Json;
 
 namespace Microsoft.Azure.Commands.Profile
 {
@@ -41,22 +38,10 @@ namespace Microsoft.Azure.Commands.Profile
         public override void ExecuteCmdlet()
         {
             string modulus = File.ReadAllText(PublicKeyFile).Split(' ')[1];
-            string kty = "RSA";
-            string n = modulus;
-            string e = "AQAB";
-            string kid = modulus.GetHashCode().ToString();
 
-            Dictionary<string, string> jwk = new Dictionary<string, string>
-            {
-                { "kty", kty },
-                { "n", n },
-                { "e", e },
-            };
-
-            string jwkStrJson = JsonConvert.SerializeObject(jwk);
-
+            SSHCertificateAuthenticationParameters sshParams = new RSASSHCertificateAuthenticationParameters(modulus);
             var context = DefaultContext;
-            string cert = _client.GetSSHCertificate(context.Account, context.Environment, context.Tenant.Id, jwkStrJson, kid, null, true, (str) => { });
+            string cert = _client.GetSSHCertificate(sshParams, context.Account, context.Environment, context.Tenant.Id, null, true, (str) => { });
             WriteObject(cert);
         }
     }

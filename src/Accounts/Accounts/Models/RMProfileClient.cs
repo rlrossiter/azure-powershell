@@ -17,6 +17,7 @@ using Microsoft.Azure.Commands.Common.Authentication.Abstractions;
 using Microsoft.Azure.Commands.Common.Authentication.Factories;
 using Microsoft.Azure.Commands.Common.Authentication.Models;
 using Microsoft.Azure.Commands.Common.Authentication.ResourceManager;
+using Microsoft.Azure.Commands.Common.Authentication.Ssh;
 using Microsoft.Azure.Commands.Profile.Models;
 using Microsoft.Azure.Commands.Profile.Properties;
 using Microsoft.Azure.Internal.Subscriptions;
@@ -317,11 +318,10 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
         }
 
         public string GetSSHCertificate(
+            SSHCertificateAuthenticationParameters sshParams,
             IAzureAccount account,
             IAzureEnvironment environment,
             string tenantId,
-            string jwkStr,
-            string keyId,
             SecureString password,
             bool skipValidation,
             Action<string> promptAction)
@@ -334,11 +334,10 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
                 ? ShowDialog.Always : ShowDialog.Never;
 
             return this.AcquireSSHCertificate(
+                sshParams,
                 account,
                 environment,
                 tenantId,
-                jwkStr,
-                keyId,
                 password,
                 promptBehavior,
                 promptAction).AccessToken;
@@ -555,11 +554,10 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
         }
 
         private IAccessToken AcquireSSHCertificate(
+            SSHCertificateAuthenticationParameters sshParams,
             IAzureAccount account,
             IAzureEnvironment environment,
             string tenantId,
-            string jwkStr,
-            string keyId,
             SecureString password,
             string promptBehavior,
             Action<string> promptAction)
@@ -571,11 +569,10 @@ namespace Microsoft.Azure.Commands.ResourceManager.Common
             }
 
             return (AzureSession.Instance.AuthenticationFactory as AuthenticationFactory).AuthenticateSSH(
+                sshParams,
                 account,
                 environment,
                 tenantId,
-                jwkStr,
-                keyId,
                 password,
                 promptBehavior,
                 promptAction);

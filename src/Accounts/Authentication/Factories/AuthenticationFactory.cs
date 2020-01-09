@@ -22,6 +22,7 @@ using System.Security;
 using Microsoft.Azure.Commands.Common.Authentication.Properties;
 using System.Threading.Tasks;
 using Microsoft.Azure.Commands.Common.Authentication.Authentication.Clients;
+using Microsoft.Azure.Commands.Common.Authentication.Ssh;
 
 namespace Microsoft.Azure.Commands.Common.Authentication.Factories
 {
@@ -156,91 +157,6 @@ namespace Microsoft.Azure.Commands.Common.Authentication.Factories
                 account,
                 environment,
                 tenant, password,
-                promptBehavior,
-                promptAction,
-                AzureSession.Instance.TokenCache,
-                resourceId);
-        }
-
-        public IAccessToken AuthenticateSSH(
-            IAzureAccount account,
-            IAzureEnvironment environment,
-            string tenant,
-            string jwk,
-            string kid,
-            SecureString password,
-            string promptBehavior,
-            Action<string> promptAction,
-            IAzureTokenCache tokenCache,
-            string resourceId = AzureEnvironment.Endpoint.ActiveDirectoryServiceEndpointResourceId)
-        {
-            IAccessToken token = null;
-            // var cache = (tokenCache as AzureTokenCache).GetUserCache() as TokenCache;
-            // if (cache == null)
-            // {
-            //     cache = new TokenCache();
-            // }
-
-            AuthenticationClientFactory authenticationClientFactory;
-            if (!AzureSession.Instance.TryGetComponent(AuthenticationClientFactory.AuthenticationClientFactoryKey, out authenticationClientFactory))
-            {
-                throw new NullReferenceException(Resources.AuthenticationClientFactoryNotRegistered);
-            }
-
-            Task<IAccessToken> authToken;
-            var processAuthenticator = Builder.Authenticator;
-            var retries = 5;
-            while (retries-- > 0)
-            {
-                try
-                {
-                    while (processAuthenticator != null && processAuthenticator.TryAuthenticateSSH(GetAuthenticationParameters(authenticationClientFactory, account, environment, tenant, password, promptBehavior, promptAction, tokenCache, resourceId), jwk, kid, out authToken))
-                    {
-                        token = authToken?.ConfigureAwait(true).GetAwaiter().GetResult();
-                        if (token != null)
-                        {
-                            account.Id = token.UserId;
-                            break;
-                        }
-
-                        processAuthenticator = processAuthenticator.Next;
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (retries == 0)
-                    {
-                        throw e;
-                    }
-
-                    TracingAdapter.Information(string.Format("[AuthenticationFactory] Exception caught when calling TryAuthenticate, retrying authentication - Exception message: '{0}'", e.Message));
-                    continue;
-                }
-
-                break;
-            }
-
-            return token;
-        }
-
-        public IAccessToken AuthenticateSSH(
-            IAzureAccount account,
-            IAzureEnvironment environment,
-            string tenant,
-            string jwk,
-            string kid,
-            SecureString password,
-            string promptBehavior,
-            Action<string> promptAction,
-            string resourceId = AzureEnvironment.Endpoint.ActiveDirectoryServiceEndpointResourceId)
-        {
-            return AuthenticateSSH(
-                account,
-                environment,
-                tenant,
-                jwk,
-                kid,
-                password,
                 promptBehavior,
                 promptAction,
                 AzureSession.Instance.TokenCache,
@@ -458,6 +374,162 @@ namespace Microsoft.Azure.Commands.Common.Authentication.Factories
                         RemoveFromTokenCache(account);
                         break;
                 }
+            }
+        }
+
+        public IAccessToken AuthenticateSSH(
+            SSHCertificateAuthenticationParameters sshParameters,
+            IAzureAccount account,
+            IAzureEnvironment environment,
+            string tenant,
+            SecureString password,
+            string promptBehavior,
+            Action<string> promptAction,
+            IAzureTokenCache tokenCache,
+            string resourceId = AzureEnvironment.Endpoint.ResourceManager)
+        {
+            IAccessToken token = null;
+            // var cache = (tokenCache as AzureTokenCache).GetUserCache() as TokenCache;
+            // if (cache == null)
+            // {
+            //     cache = new TokenCache();
+            // }
+
+            AuthenticationClientFactory authenticationClientFactory;
+            if (!AzureSession.Instance.TryGetComponent(AuthenticationClientFactory.AuthenticationClientFactoryKey, out authenticationClientFactory))
+            {
+                throw new NullReferenceException(Resources.AuthenticationClientFactoryNotRegistered);
+            }
+
+            Task<IAccessToken> authToken;
+            var processAuthenticator = Builder.Authenticator;
+            var retries = 5;
+            while (retries-- > 0)
+            {
+                try
+                {
+                    while (processAuthenticator != null && processAuthenticator.TryAuthenticateSSH(GetAuthenticationParameters(authenticationClientFactory, account, environment, tenant, password, promptBehavior, promptAction, tokenCache, resourceId), sshParameters.Jwk, sshParameters.KeyId, out authToken))
+                    {
+                        token = authToken?.ConfigureAwait(true).GetAwaiter().GetResult();
+                        if (token != null)
+                        {
+                            account.Id = token.UserId;
+                            break;
+                        }
+
+                        processAuthenticator = processAuthenticator.Next;
+                    }
+                }
+                catch (Exception e)
+                {
+                    if (retries == 0)
+                    {
+                        throw e;
+                    }
+
+                    TracingAdapter.Information(string.Format("[AuthenticationFactory] Exception caught when calling TryAuthenticate, retrying authentication - Exception message: '{0}'", e.Message));
+                    continue;
+                }
+
+                break;
+            }
+
+            return token;
+        }
+
+        public IAccessToken AuthenticateSSH(
+            SSHCertificateAuthenticationParameters sshParams,
+            IAzureAccount account,
+            IAzureEnvironment environment,
+            string tenant,
+            SecureString password,
+            string promptBehavior,
+            Action<string> promptAction,
+            string resourceId = AzureEnvironment.Endpoint.ResourceManager)
+        {
+            return AuthenticateSSH(
+                sshParams,
+                account,
+                environment,
+                tenant,
+                password,
+                promptBehavior,
+                promptAction,
+                AzureSession.Instance.TokenCache,
+                resourceId);
+        }
+
+        public SSHClientCertificateCredentials GetClientCertificateCredentials(SSHCertificateAuthenticationParameters sshParams, IAzureContext context)
+        {
+            return GetClientCertificateCredentials(sshParams, context, AzureEnvironment.Endpoint.ResourceManager);
+        }
+
+        public SSHClientCertificateCredentials GetClientCertificateCredentials(SSHCertificateAuthenticationParameters sshParams, IAzureContext context, string targetEndpoint)
+        {
+            if (context.Account == null)
+            {
+                throw new ArgumentException(Resources.ArmAccountNotFound);
+            }
+
+            string tenant = null;
+
+            if (context.Subscription != null && context.Account != null)
+            {
+                tenant = context.Subscription.GetPropertyAsArray(AzureSubscription.Property.Tenants)
+                      .Intersect(context.Account.GetPropertyAsArray(AzureAccount.Property.Tenants))
+                      .FirstOrDefault();
+            }
+
+            if (tenant == null && context.Tenant != null && new Guid(context.Tenant.Id) != Guid.Empty)
+            {
+                tenant = context.Tenant.Id.ToString();
+            }
+
+            if (tenant == null)
+            {
+                throw new ArgumentException(Resources.NoTenantInContext);
+            }
+
+            try
+            {
+                TracingAdapter.Information(Resources.UPNAuthenticationTrace,
+                    context.Account.Id, context.Environment.Name, tenant);
+
+                // TODO: When we will refactor the code, need to add tracing
+                /*TracingAdapter.Information(Resources.UPNAuthenticationTokenTrace,
+                    token.LoginType, token.TenantId, token.UserId);*/
+
+                var tokenCache = AzureSession.Instance.TokenCache;
+
+                if (context.TokenCache != null)
+                {
+                    tokenCache = context.TokenCache;
+                }
+
+                SSHClientCertificateCredentials result = null;
+                switch (context.Account.Type)
+                {
+                    case AzureAccount.AccountType.User:
+                    case AzureAccount.AccountType.ServicePrincipal:
+                        switch (sshParams.KeyType)
+                        {
+                            case SshKeyType.RSA:
+                                result = new RSASSHClientCertificateCredentials(AuthenticateSSH(sshParams, context.Account, context.Environment, tenant, null, ShowDialog.Never, null, context.Environment.GetTokenAudience(targetEndpoint)));
+                                break;
+                            default:
+                                throw new NotSupportedException(sshParams.KeyType.ToString());
+                        }
+                        break;
+                    default:
+                        throw new NotSupportedException(context.Account.Type.ToString());
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                TracingAdapter.Information(Resources.AdalAuthException, ex.Message);
+                throw new ArgumentException(Resources.InvalidArmContext, ex);
             }
         }
 
