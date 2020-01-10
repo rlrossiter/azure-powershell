@@ -12,81 +12,46 @@
 // limitations under the License.
 // ----------------------------------------------------------------------------------
 
-using System.Collections.Generic;
+using System;
 
 namespace Microsoft.Azure.Commands.Ssh
 {
     public class RSAParser
     {
-        public const string KeyType = "RSA";
-        public const string Exponent = "AQAB";
+        private const string algorithm = "ssh-rsa";
 
-        private const string KeyTypeKey = "kty";
-        private const string ModulusKey = "n";
-        private const string ExponentKey = "e";
+        public string Modulus { get; private set; }
 
-        private string publicKey;
-        private string modulus;
-        private string keyId;
-
-        public string Modulus
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(modulus))
-                {
-                    modulus = GetModulus(publicKey);
-                }
-
-                return modulus;
-            }
-        }
-
-        public string KeyId
-        {
-            get
-            {
-                if (string.IsNullOrEmpty(keyId))
-                {
-                    keyId = GetKeyId(Modulus);
-                }
-
-                return keyId;
-            }
-        }
-
-        public Dictionary<string, string> Jwk
-        {
-            get
-            {
-                return new Dictionary<string, string>
-                {
-                    { KeyTypeKey, KeyType },
-                    { ModulusKey, Modulus },
-                    { ExponentKey, Exponent }
-                };
-            }
-        }
+        public string Exponent { get; private set; }
 
         public RSAParser(string publicKeyFileContents)
         {
             AssertPublicKeyFormat(publicKeyFileContents);
-            this.publicKey = publicKeyFileContents;
         }
 
         private void AssertPublicKeyFormat(string publicKey)
         {
-            return;
+            string[] keyParts = publicKey.Split(' ');
+
+            if (keyParts.Length != 3)
+            {
+                throw new FormatException("Expected 3 space-separated parts to the public key (algorithm, key, comment)");
+            }
         }
 
         private string GetModulus(string publicKey)
         {
-            return publicKey.Split(' ')[1];
+            string key = publicKey.Split(' ')[1];
+            Span<byte> keyBytes = Convert.FromBase64String(key);
+
+            var str = BitConverter.ToString(keyBytes.ToArray());
+
+            return null;
         }
 
-        private string GetKeyId(string modulus)
+        private string GetExponent(string publicKey)
         {
-            return modulus.GetHashCode().ToString();
+            return null;
         }
     }
 }

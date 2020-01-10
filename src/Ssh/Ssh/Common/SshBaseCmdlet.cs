@@ -99,7 +99,7 @@ namespace Microsoft.Azure.Commands.Ssh
         {
             string directoryName = Path.GetFullPath(Path.GetDirectoryName(publicKeyFileName));
             string certFileName = Path.GetFileNameWithoutExtension(publicKeyFileName) + ".cer";
-            return directoryName + Path.DirectorySeparatorChar + certFileName;
+            return Path.Combine(directoryName, certFileName);
         }
 
         public string GetFirstPublicIp(VirtualMachine vm)

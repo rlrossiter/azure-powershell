@@ -16,6 +16,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
+using Microsoft.Azure.Commands.Common.Authentication;
+using Microsoft.Azure.Commands.Common.Authentication.Factories;
+using Microsoft.Azure.Commands.Common.Authentication.Ssh;
 using Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters;
 using Microsoft.Azure.Commands.Ssh.Models;
 using Newtonsoft.Json;
@@ -73,18 +76,9 @@ namespace Microsoft.Azure.Commands.Ssh
             string certFileName = GetCertificateFileName(this.PublicKeyFile);
             RSAParser rsa = new RSAParser(File.ReadAllText(PublicKeyFile));
 
-            string jwkStrJson = JsonConvert.SerializeObject(rsa.Jwk);
-            string certText = ProfileClient.GetSSHCertificate(
-                DefaultContext.Account,
-                DefaultContext.Environment,
-                DefaultContext.Tenant.Id,
-                jwkStrJson,
-                rsa.KeyId,
-                null,
-                true,
-                (str) => { });
-            RSACertGenerator certGenerator = new RSACertGenerator(certText);
-            File.WriteAllText(certFileName, certGenerator.CertificateContents);
+            var factory = AzureSession.Instance.AuthenticationFactory as AuthenticationFactory;
+            var credentials = factory.GetClientCertificateCredentials(new RSASSHCertificateAuthenticationParameters(rsa.Modulus), DefaultContext);
+            File.WriteAllText(certFileName, credentials.Certificate);
 
             PSSshConfigEntry entry = new PSSshConfigEntry
             {
