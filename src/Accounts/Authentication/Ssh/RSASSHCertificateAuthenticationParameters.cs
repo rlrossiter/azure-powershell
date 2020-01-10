@@ -20,18 +20,17 @@ namespace Microsoft.Azure.Commands.Common.Authentication.Ssh
     public class RSASSHCertificateAuthenticationParameters : SSHCertificateAuthenticationParameters
     {
         private string jwk;
-        private const string rsaExponent = "AQAB";
 
         public override SshKeyType KeyType => SshKeyType.RSA;
         public override string Jwk => jwk;
 
-        public RSASSHCertificateAuthenticationParameters(string modulus)
+        public RSASSHCertificateAuthenticationParameters(string modulus, string exponent)
         {
             Dictionary<string, string> jwkDict = new Dictionary<string, string>
             {
                 { KeyTypeKey, SshKeyType.RSA.ToString() },
                 { ModulusKey, modulus },
-                { ExponentKey, rsaExponent }
+                { ExponentKey, exponent }
             };
 
             jwk = JsonConvert.SerializeObject(jwkDict);

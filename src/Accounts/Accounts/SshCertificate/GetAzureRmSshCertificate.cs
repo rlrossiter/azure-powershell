@@ -37,9 +37,10 @@ namespace Microsoft.Azure.Commands.Profile
 
         public override void ExecuteCmdlet()
         {
-            string modulus = File.ReadAllText(PublicKeyFile).Split(' ')[1];
+            string pubKeyText = File.ReadAllText(PublicKeyFile);
+            RSAParser parser = new RSAParser(pubKeyText);
 
-            SSHCertificateAuthenticationParameters sshParams = new RSASSHCertificateAuthenticationParameters(modulus);
+            SSHCertificateAuthenticationParameters sshParams = new RSASSHCertificateAuthenticationParameters(parser.Modulus, parser.Exponent);
             var context = DefaultContext;
             string cert = _client.GetSSHCertificate(sshParams, context.Account, context.Environment, context.Tenant.Id, null, true, (str) => { });
             WriteObject(cert);
