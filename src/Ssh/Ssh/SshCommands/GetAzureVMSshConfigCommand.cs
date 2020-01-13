@@ -12,16 +12,14 @@
 // limitations under the License.
 // ----------------------------------------------------------------------------------
 
-using System.Collections.Generic;
+using System;
 using System.IO;
-using System.Linq;
 using System.Management.Automation;
 using Microsoft.Azure.Commands.Common.Authentication;
 using Microsoft.Azure.Commands.Common.Authentication.Factories;
 using Microsoft.Azure.Commands.Common.Authentication.Ssh;
 using Microsoft.Azure.Commands.ResourceManager.Common.ArgumentCompleters;
 using Microsoft.Azure.Commands.Ssh.Models;
-using Newtonsoft.Json;
 
 namespace Microsoft.Azure.Commands.Ssh
 {
@@ -74,10 +72,11 @@ namespace Microsoft.Azure.Commands.Ssh
             }
 
             string certFileName = GetCertificateFileName(this.PublicKeyFile);
-            RSAParser rsa = new RSAParser(File.ReadAllText(PublicKeyFile));
+            RSAParser rsa = new RSAParser(BitConverter.IsLittleEndian);
+            rsa.ParseKey(File.ReadAllText(PublicKeyFile));
 
             var factory = AzureSession.Instance.AuthenticationFactory as AuthenticationFactory;
-            var credentials = factory.GetClientCertificateCredentials(new RSASSHCertificateAuthenticationParameters(rsa.Modulus), DefaultContext);
+            var credentials = factory.GetClientCertificateCredentials(new RSASSHCertificateAuthenticationParameters(rsa.Modulus, rsa.Exponent), DefaultContext);
             File.WriteAllText(certFileName, credentials.Certificate);
 
             PSSshConfigEntry entry = new PSSshConfigEntry
